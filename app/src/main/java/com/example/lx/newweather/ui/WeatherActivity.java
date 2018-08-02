@@ -2,6 +2,7 @@ package com.example.lx.newweather.ui;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.view.ViewPager;
@@ -21,8 +22,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.lx.newweather.R;
+import com.example.lx.newweather.db.WeatherNow;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+
+import org.litepal.crud.callback.SaveCallback;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,9 +56,14 @@ public class WeatherActivity extends AppCompatActivity {
         supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_weather);
         Intent intent = getIntent();
-        location = intent.getStringExtra("location");
+        if (intent.getStringExtra("newLocation") != null) {
+            location = intent.getStringExtra("newLocation");
+        } else {
+            location = intent.getStringExtra("location");
+        }
         initView();
         getWeatherData();
+
     }
 
     private void initView() {
@@ -109,6 +118,7 @@ public class WeatherActivity extends AppCompatActivity {
                                     toolbar.setTitle(location);
                                     location = now.getBasic().getLocation();
                                 }
+
                             }
                         });
                 HeWeather.getWeatherForecast(WeatherActivity.this, location, Lang.CHINESE_SIMPLIFIED
@@ -149,6 +159,7 @@ public class WeatherActivity extends AppCompatActivity {
                 refresh.setRefreshing(false);
             }
         });
+
         scrollView.setVisibility(View.VISIBLE);
     }
 
@@ -163,7 +174,9 @@ public class WeatherActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.city_group:
-                Intent intent = new Intent(WeatherActivity.this, SearchCityActivity.class);
+                Intent intent = new Intent(WeatherActivity.this, CityManagerActivity.class);
+                intent.putExtra("cond", weatherInfoText.getText().toString());
+                intent.putExtra("tmp", weatherTmp.getText().toString());
                 startActivityForResult(intent, 1);
                 break;
             case R.id.city_set:
@@ -180,7 +193,10 @@ public class WeatherActivity extends AppCompatActivity {
         switch (requestCode) {
             case 1:
                 if (resultCode == RESULT_OK) {
-                    location = data.getStringExtra("location");
+                    location = data.getStringExtra("newLocation");
+                    SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(this).edit();
+                    editor.putString("newLocation", location);
+                    editor.apply();
                 }
                 break;
             default:

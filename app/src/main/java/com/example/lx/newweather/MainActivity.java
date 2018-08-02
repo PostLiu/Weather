@@ -28,6 +28,8 @@ import com.baidu.location.LocationClientOption;
 import com.example.lx.newweather.ui.SearchCityActivity;
 import com.example.lx.newweather.ui.WeatherActivity;
 
+import org.litepal.LitePal;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +38,7 @@ import interfaces.heweather.com.interfacesmodule.view.HeConfig;
 public class MainActivity extends AppCompatActivity {
 
     private LocationClient locationClient;
+    private SharedPreferences prefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,24 +47,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         HeConfig.init("HE1802280747411348", "cd1feda259d149d597016661aa3dacff");
         HeConfig.switchToFreeServerNode();
+        LitePal.getDatabase();
 
-//        TextView textView = findViewById(R.id.text);
-//        textView.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
-//                if (prefs.getString("location", null) != null) {
-//                    Intent intent = new Intent(MainActivity.this, WeatherActivity.class);
-//                    intent.putExtra("location", prefs.getString("location", ""));
-//                    startActivity(intent);
-//                    finish();
-//                } else {
-//                    Intent intent = new Intent(MainActivity.this, SearchCityActivity.class);
-//                    startActivity(intent);
-//                    finish();
-//                }
-//            }
-//        });
         locationClient = new LocationClient(getApplicationContext());
         locationClient.registerLocationListener(new LocationListener());
         List<String> permissionList = new ArrayList<String>();
@@ -139,13 +126,18 @@ public class MainActivity extends AppCompatActivity {
 
                         @Override
                         public void onAnimationEnd(Animation animation) {
-                            Intent intent = new Intent(MainActivity.this, WeatherActivity.class);
-                            intent.putExtra("location", location);
-                            startActivity(intent);
-                            finish();
-                            SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(MainActivity.this).edit();
-                            editor.putString("location",location);
-                            editor.apply();
+                            prefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+                            if (prefs.getString("newLocation", null) != null) {
+                                Intent intent = new Intent(MainActivity.this, WeatherActivity.class);
+                                intent.putExtra("newLocation", prefs.getString("newLocation", ""));
+                                startActivity(intent);
+                                finish();
+                            } else {
+                                Intent intent = new Intent(MainActivity.this, WeatherActivity.class);
+                                intent.putExtra("location", location);
+                                startActivity(intent);
+                                finish();
+                            }
                         }
 
                         @Override

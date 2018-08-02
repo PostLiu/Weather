@@ -4,26 +4,29 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 import android.widget.RemoteViews;
 
 import com.example.lx.newweather.R;
+import com.example.lx.newweather.db.WeatherNow;
+import com.example.lx.newweather.ui.WeatherActivity;
 
 /**
  * Implementation of App Widget functionality.
  */
 public class WeatherWidget extends AppWidgetProvider {
 
+    public static WeatherNow wa = new WeatherNow();
+
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
                                 int appWidgetId) {
 
-        CharSequence widgetText = context.getString(R.string.appwidget_text);
-        CharSequence weatherCond = context.getString(R.string.weather_cond);
-        CharSequence weatherTmp = context.getString(R.string.weather_tmp);
         // Construct the RemoteViews object
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.weather_widget);
-        views.setTextViewText(R.id.widget_location, widgetText);
-        views.setTextViewText(R.id.widget_cond, weatherCond);
-        views.setTextViewText(R.id.widget_tmp, weatherTmp);
+        views.setTextViewText(R.id.widget_location, wa.getLocation());
+        views.setTextViewText(R.id.widget_cond, wa.getCond());
+        views.setTextViewText(R.id.widget_tmp, wa.getTmp());
 
         // Instruct the widget manager to update the widget
         appWidgetManager.updateAppWidget(appWidgetId, views);
@@ -57,9 +60,6 @@ public class WeatherWidget extends AppWidgetProvider {
     @Override
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
-        if (intent == null) {
-            return;
-        }
     }
 }
 

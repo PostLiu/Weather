@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
@@ -18,8 +19,11 @@ import android.widget.Toast;
 
 import com.example.lx.newweather.adapter.CityListAdapter;
 import com.example.lx.newweather.R;
+import com.example.lx.newweather.db.WeatherNow;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+
+import org.litepal.crud.callback.SaveCallback;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -47,7 +51,7 @@ public class SearchCityActivity extends AppCompatActivity {
     private String cityList;
     private List<String> city = new ArrayList<String>();
     private CityListAdapter adapter;
-    private String location;
+    private String location, cond, tmp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,6 +79,7 @@ public class SearchCityActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 getCityList();
+                getWeatherNow();
             }
 
             @Override
@@ -87,6 +92,7 @@ public class SearchCityActivity extends AppCompatActivity {
 
 
     private void clickList() {
+        city.clear();
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -96,13 +102,43 @@ public class SearchCityActivity extends AppCompatActivity {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                Intent intent = new Intent();
                 int index = city.get(i).indexOf(" ");
                 String cityName = city.get(i).substring(0, index);
-                intent.putExtra("location", cityName);
-                setResult(RESULT_OK, intent);
+                final WeatherNow weatherNow = new WeatherNow();
+                weatherNow.setLocation(cityName);
+                weatherNow.setCond(cond);
+                weatherNow.setTmp(tmp);
+                weatherNow.saveAsync().listen(new SaveCallback() {
+                    @Override
+                    public void onFinish(boolean success) {
+
+                    }
+                });
                 finish();
 
+
+            }
+        });
+
+    }
+
+    private void getWeatherNow() {
+        HeWeather.getWeatherNow(SearchCityActivity.this, location, new HeWeather.OnResultWeatherNowBeanListener() {
+            @Override
+            public void onError(Throwable throwable) {
+
+            }
+
+            @Override
+            public void onSuccess(List<Now> list) {
+                Gson gson = new Gson();
+                String weather = gson.toJson(list);
+                List<Now> nowList = gson.fromJson(weather, new TypeToken<List<Now>>() {
+                }.getType());
+                for (Now now : nowList) {
+                    cond = now.getNow().getCond_txt();
+                    tmp = now.getNow().getTmp() + "℃";
+                }
             }
         });
 

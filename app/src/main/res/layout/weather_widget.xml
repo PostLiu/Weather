@@ -10,7 +10,7 @@
         android:layout_height="wrap_content"
         android:layout_centerVertical="true"
         android:layout_marginLeft="5dp"
-        android:text="@string/appwidget_text"
+        android:text="@string/weather_city"
         android:textColor="@color/colorText"
         android:textSize="24sp" />
 
