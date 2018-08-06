@@ -12,6 +12,10 @@ import com.example.lx.newweather.db.WeatherNow;
 
 import java.util.List;
 
+
+/**
+ * 城市管理界面的适配器
+ */
 public class CityManagerAdapter extends BaseAdapter {
     private Context context;
     private List<WeatherNow> lists;
@@ -38,8 +42,8 @@ public class CityManagerAdapter extends BaseAdapter {
 
     @Override
     public View getView(int i, View view, ViewGroup viewGroup) {
-        ViewHolder holder = null;
-        WeatherNow weatherNow = lists.get(i);   //这里需要获取相应的实例
+        ViewHolder holder;
+        WeatherNow now = lists.get(i);   //这里需要获取相应的实例
         if (view == null) {
             view = LayoutInflater.from(context).inflate(R.layout.activity_city_manager_item, null, false);
             holder = new ViewHolder();
@@ -50,9 +54,9 @@ public class CityManagerAdapter extends BaseAdapter {
         } else {
             holder = (ViewHolder) view.getTag();
         }
-        holder.itemLocation.setText(weatherNow.getLocation());
-        holder.itemCond.setText(weatherNow.getCond());
-        holder.itemTmp.setText(weatherNow.getTmp());
+        holder.itemLocation.setText(now.getLocation());
+        holder.itemCond.setText(now.getCond());
+        holder.itemTmp.setText(now.getTmp());
         return view;
     }
 

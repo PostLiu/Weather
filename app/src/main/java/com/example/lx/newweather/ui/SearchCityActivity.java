@@ -23,6 +23,10 @@ import com.example.lx.newweather.db.WeatherNow;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import org.litepal.LitePal;
+import org.litepal.crud.DataSupport;
+import org.litepal.crud.LitePalSupport;
+import org.litepal.crud.callback.FindMultiCallback;
 import org.litepal.crud.callback.SaveCallback;
 
 import java.io.IOException;
@@ -51,7 +55,9 @@ public class SearchCityActivity extends AppCompatActivity {
     private String cityList;
     private List<String> city = new ArrayList<String>();
     private CityListAdapter adapter;
-    private String location, cond, tmp;
+    private String location, cond, tmp, cityName;
+    private WeatherNow now = new WeatherNow();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,7 +85,7 @@ public class SearchCityActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 getCityList();
-                getWeatherNow();
+                getWeather(location);
             }
 
             @Override
@@ -90,7 +96,9 @@ public class SearchCityActivity extends AppCompatActivity {
 
     }
 
-
+    /**
+     * 控件点击事件
+     */
     private void clickList() {
         city.clear();
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
@@ -101,20 +109,25 @@ public class SearchCityActivity extends AppCompatActivity {
         });
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+            public void onItemClick(AdapterView<?> adapterView, View view, final int i, long l) {
                 int index = city.get(i).indexOf(" ");
-                String cityName = city.get(i).substring(0, index);
-                final WeatherNow weatherNow = new WeatherNow();
-                weatherNow.setLocation(cityName);
-                weatherNow.setCond(cond);
-                weatherNow.setTmp(tmp);
-                weatherNow.saveAsync().listen(new SaveCallback() {
+                cityName = city.get(i).substring(0, index);
+                LitePal.findAllAsync(WeatherNow.class).listen(new FindMultiCallback() {
                     @Override
-                    public void onFinish(boolean success) {
-
+                    public <T> void onFinish(List<T> t) {
+                        List<WeatherNow> nows = (List<WeatherNow>) t;
+                        String name = nows.get(i).getLocation();
+                        if (cityName.equals(name)) {
+                            Toast.makeText(SearchCityActivity.this, "城市已存在", Toast.LENGTH_SHORT).show();
+                        } else {
+                            saveWeather();
+                            Intent intent = new Intent();
+                            intent.putExtra("newLocation", cityName);
+                            setResult(RESULT_OK, intent);
+                            finish();
+                        }
                     }
                 });
-                finish();
 
 
             }
@@ -122,29 +135,52 @@ public class SearchCityActivity extends AppCompatActivity {
 
     }
 
-    private void getWeatherNow() {
-        HeWeather.getWeatherNow(SearchCityActivity.this, location, new HeWeather.OnResultWeatherNowBeanListener() {
-            @Override
-            public void onError(Throwable throwable) {
-
-            }
-
-            @Override
-            public void onSuccess(List<Now> list) {
-                Gson gson = new Gson();
-                String weather = gson.toJson(list);
-                List<Now> nowList = gson.fromJson(weather, new TypeToken<List<Now>>() {
-                }.getType());
-                for (Now now : nowList) {
-                    cond = now.getNow().getCond_txt();
-                    tmp = now.getNow().getTmp() + "℃";
-                }
-            }
-        });
+    /**
+     * 将需要的数据保存到数据库
+     */
+    private void saveWeather() {
+        now.setLocation(cityName);
+        now.setCond(cond);
+        now.setTmp(tmp);
+        now.save();
 
     }
 
+    /**
+     * 获取特定城市的天气数据
+     *
+     * @param location
+     */
+    private void getWeather(final String location) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                HeWeather.getWeatherNow(SearchCityActivity.this, location, new HeWeather.OnResultWeatherNowBeanListener() {
+                    @Override
+                    public void onError(Throwable throwable) {
 
+                    }
+
+                    @Override
+                    public void onSuccess(List<Now> list) {
+                        Gson gson = new Gson();
+                        String weather = gson.toJson(list);
+                        List<Now> nowList = gson.fromJson(weather, new TypeToken<List<Now>>() {
+                        }.getType());
+                        for (Now now : nowList) {
+                            cond = now.getNow().getCond_txt();
+                            tmp = now.getNow().getTmp() + "℃";
+                        }
+                    }
+                });
+
+            }
+        });
+    }
+
+    /**
+     * 搜索城市获取列表
+     */
     private void getCityList() {
         location = editCity.getText().toString();
         runOnUiThread(new Runnable() {
@@ -170,13 +206,7 @@ public class SearchCityActivity extends AppCompatActivity {
                                         city.add(basic.getLocation() + " " + basic.getParent_city() + " " + basic.getAdmin_area());
                                         Log.e("aaaa", city + "");
                                     }
-
                                     adapter.notifyDataSetChanged();
-
-                                    SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(SearchCityActivity.this).edit();
-                                    editor.putString("location", String.valueOf(city));
-                                    editor.apply();
-
                                 }
 
                             });

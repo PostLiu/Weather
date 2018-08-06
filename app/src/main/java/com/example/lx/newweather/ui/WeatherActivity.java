@@ -26,6 +26,8 @@ import com.example.lx.newweather.db.WeatherNow;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import org.litepal.LitePal;
+import org.litepal.crud.callback.FindMultiCallback;
 import org.litepal.crud.callback.SaveCallback;
 
 import java.util.ArrayList;
@@ -33,6 +35,7 @@ import java.util.List;
 
 import interfaces.heweather.com.interfacesmodule.bean.Lang;
 import interfaces.heweather.com.interfacesmodule.bean.Unit;
+import interfaces.heweather.com.interfacesmodule.bean.weather.Weather;
 import interfaces.heweather.com.interfacesmodule.bean.weather.forecast.Forecast;
 import interfaces.heweather.com.interfacesmodule.bean.weather.forecast.ForecastBase;
 import interfaces.heweather.com.interfacesmodule.bean.weather.now.Now;
@@ -48,6 +51,8 @@ public class WeatherActivity extends AppCompatActivity {
     private LinearLayout forecastLayout;
     private List<ForecastBase> forecastBaseList = new ArrayList<ForecastBase>();
     private String forecastBase;
+    private String name;
+    private WeatherNow now = new WeatherNow();
 
 
     @Override
@@ -64,8 +69,12 @@ public class WeatherActivity extends AppCompatActivity {
         initView();
         getWeatherData();
 
+
     }
 
+    /**
+     * 初始化一些控件
+     */
     private void initView() {
         toolbar = findViewById(R.id.weather_toolbar);
         refresh = findViewById(R.id.swipe_refresh);
@@ -90,6 +99,9 @@ public class WeatherActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * 解析具体的天气数据
+     */
     private void getWeatherData() {
         runOnUiThread(new Runnable() {
             @Override
@@ -118,7 +130,6 @@ public class WeatherActivity extends AppCompatActivity {
                                     toolbar.setTitle(location);
                                     location = now.getBasic().getLocation();
                                 }
-
                             }
                         });
                 HeWeather.getWeatherForecast(WeatherActivity.this, location, Lang.CHINESE_SIMPLIFIED
@@ -163,6 +174,16 @@ public class WeatherActivity extends AppCompatActivity {
         scrollView.setVisibility(View.VISIBLE);
     }
 
+    /**
+     * 保存数据到数据库
+     */
+    private void saveWeather() {
+        now.setLocation(location);
+        now.setCond(weatherInfoText.getText().toString());
+        now.setTmp(weatherTmp.getText().toString());
+        now.save();
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -174,10 +195,7 @@ public class WeatherActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.city_group:
-                Intent intent = new Intent(WeatherActivity.this, CityManagerActivity.class);
-                intent.putExtra("cond", weatherInfoText.getText().toString());
-                intent.putExtra("tmp", weatherTmp.getText().toString());
-                startActivityForResult(intent, 1);
+                jumpCityManager();
                 break;
             case R.id.city_set:
                 Intent inSet = new Intent(WeatherActivity.this, SetActivity.class);
@@ -187,13 +205,44 @@ public class WeatherActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * 跳转城市管理界面的一些处理
+     */
+    private void jumpCityManager() {
+        LitePal.findAllAsync(WeatherNow.class).listen(new FindMultiCallback() {
+            @Override
+            public <T> void onFinish(List<T> t) {
+                List<WeatherNow> nows = (List<WeatherNow>) t;
+                for (WeatherNow now : nows) {
+                    name = now.getLocation();
+                }
+                if (location.equals(name)) {
+                    now.setCond(weatherInfoText.getText().toString());
+                    now.setTmp(weatherTmp.getText().toString());
+                    now.updateAll("location=?", location);
+                    Intent intent = new Intent(WeatherActivity.this, CityManagerActivity.class);
+                    intent.putExtra("location", location);
+                    startActivityForResult(intent, 2);
+                    Toast.makeText(WeatherActivity.this, "更新成功", Toast.LENGTH_SHORT).show();
+                } else {
+                    saveWeather();
+                    Intent intent = new Intent(WeatherActivity.this, CityManagerActivity.class);
+                    intent.putExtra("location", location);
+                    startActivityForResult(intent, 2);
+                    Toast.makeText(WeatherActivity.this, "保存成功", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         switch (requestCode) {
-            case 1:
+            case 2:
                 if (resultCode == RESULT_OK) {
-                    location = data.getStringExtra("newLocation");
+                    location = data.getStringExtra("location");
                     SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(this).edit();
                     editor.putString("newLocation", location);
                     editor.apply();
@@ -207,5 +256,12 @@ public class WeatherActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         getWeatherData();
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
     }
 }
